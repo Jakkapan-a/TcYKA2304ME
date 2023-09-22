@@ -1,1 +1,1 @@
-# TcYKA2304ME Controller steppe motor
+# YKA2304ME Controller steppe motor
