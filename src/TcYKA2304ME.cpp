@@ -63,13 +63,13 @@ bool TcYKA2304ME::learning()
                 this->minPosition = 0;
                 this->maxPosition = this->_position;
                 this->_previousPosition = this->_position;
+                // Set motor to start position
+                this->_position = this->minPosition;
+                this->_lastDebounceTime = this->_lastDebounceTime*1000; // delay 1s
                 // Call event
                 if(this->OnLearned != NULL){
                     this->OnLearned(this->_position, this->minPosition, this->maxPosition);
                 }
-                // Set motor to start position
-                this->_position = this->minPosition;
-                this->_lastDebounceTime = this->_lastDebounceTime*1000; // delay 1s
             }
         }
         // Pulse to move backward
@@ -89,12 +89,12 @@ void TcYKA2304ME::update()
     }
 
     unsigned long currentMicros = micros();
-    if(currentMicros - this->_lastDebounceTime >static_cast<unsigned long>(this->_speed))
+    if(this->_position != this->_previousPosition)
     {
-        if(this->_position != this->_previousPosition)
+        if(currentMicros - this->_lastDebounceTime >static_cast<unsigned long>(this->getSpeedMicros()))
         {
             // Check direction
-            if(this->_position > this->_previousPosition){
+            if(this->_position > this->_previousPosition){          // Forward
                 this->_direction = true; // forward
                 this->_previousPosition++;
                   if(this->_state_end){
@@ -109,7 +109,7 @@ void TcYKA2304ME::update()
                 this->_previousPosition = this->maxPosition;
              }
 
-            }else{
+            }else{                                                  // Backward
                 this->_direction = false; // backward
                 this->_previousPosition--;
                 // Check start and end position
@@ -131,7 +131,13 @@ void TcYKA2304ME::update()
             }else if(this->_position < this->minPosition){
                 this->_position = this->minPosition;
             }
-          
+
+            if(this->_position == this->_previousPosition){
+                // Call event
+                if(this->OnUpdate != NULL){
+                    this->OnUpdate(this->_position, this->minPosition, this->maxPosition);
+                }
+            }
             // Set motor
             digitalWrite(this->pin_dr, this->_direction);  // Direction of motor
             isPulse = !isPulse;
@@ -139,6 +145,34 @@ void TcYKA2304ME::update()
         }
         this->_lastDebounceTime = currentMicros;
     }
+}
+
+void TcYKA2304ME::setDefaultSpeed()
+{
+    if(this->_position > this->_previousPosition){
+        this->totalPulse = this->_position - this->_previousPosition;
+    }else{
+        this->totalPulse = this->_previousPosition - this->_position;
+    }
+    this->countRun = 0;
+}
+unsigned long TcYKA2304ME::getSpeedMicros(){
+    this->countRun++;
+    if(this->totalPulse < this->increase || this->countRun < this->decrease)
+    {
+        if(this->countRun <= this->increase /2)
+        {
+            return map(this->countRun, 0, this->increase /2, this->_speedLearning , this->_speed);
+        }else if(this->countRun >= this->totalPulse - (this->decrease /2)){
+            return map(this->countRun, this->totalPulse - this->decrease /2, this->totalPulse, this->_speed, this->_speedLearning);
+        }
+        return map(this->countRun, this->increase /2, this->totalPulse - (this->decrease /2), this->_speedLearning/2, this->_speedLearning);
+    }else if(this->countRun <= this->increase){
+        return map(this->countRun, 0, this->increase, this->_speedLearning , this->_speed);
+    }else if(this->countRun >= this->totalPulse - this->decrease){
+        return map(this->countRun, this->totalPulse - this->decrease, this->totalPulse, this->_speed, this->_speedLearning);
+    }
+    return this->_speed;
 }
 void TcYKA2304ME::setPosition(unsigned long position)
 {
@@ -149,16 +183,20 @@ void TcYKA2304ME::setPosition(unsigned long position)
     }else{
         this->_position = position;
     }
+
+    this->setDefaultSpeed();
 }
 
 void TcYKA2304ME::ForwardToEnd()
 {
     this->_position = this->maxPosition;
+    this->setDefaultSpeed();
 }
 
 void TcYKA2304ME::BackwardToStart()
 {
     this->_position = this->minPosition;
+    this->setDefaultSpeed();
 }
 
 int TcYKA2304ME::getSpeed()

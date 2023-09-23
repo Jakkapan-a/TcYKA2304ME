@@ -17,8 +17,16 @@ class TcYKA2304ME
     unsigned long maxPosition = 5000;
     // Debounce
     unsigned long _lastDebounceTime = 0;
-	  int _speed = 50;
+	  int _speed = 20;
     int _speedLearning = 100;
+
+    // Pulse
+    // unsigned long currentPos = 0;
+    // unsigned long targetPos = 0;
+    unsigned long totalPulse = 0;
+    unsigned long countRun = 0;
+    unsigned long increase = 5000;
+    unsigned long decrease = 5000;
     // Direction
     bool _direction = true; // true: forward, false: backward
     bool isLearning = false;
@@ -27,6 +35,12 @@ class TcYKA2304ME
     void setDefaultLearning();
     bool learning();
 
+    // Speed
+    void setDefaultSpeed();
+    long getSpeedPulse();
+    unsigned long getSpeedMicros();
+
+    // Pulse
     void (*OnLearned)(unsigned long position, unsigned long minPosition, unsigned long maxPosition);
     void (*OnStart)(unsigned long position, unsigned long minPosition, unsigned long maxPosition);
     void (*OnEnd)(unsigned long position, unsigned long minPosition, unsigned long maxPosition);
