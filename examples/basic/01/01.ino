@@ -1,7 +1,6 @@
 // For example 01 use mega2560 board
 // This example shows how to use the library to control the motor
 // The motor is connected to the pins 5, 22, 25
-
 #include <TcYKA2304ME.h>
 #define PU1_PIN 5
 #define DR1_PIN 22

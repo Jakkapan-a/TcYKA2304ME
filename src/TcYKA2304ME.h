@@ -75,6 +75,7 @@ class TcYKA2304ME
     void setOnStart(void (*function)(unsigned long position, unsigned long minPosition, unsigned long maxPosition));
     void setOnEnd(void (*function)(unsigned long position, unsigned long minPosition, unsigned long maxPosition));
     void setOnUpdate(void (*function)(unsigned long position, unsigned long minPosition, unsigned long maxPosition));
+    void setOnUpdated(void (*function)(unsigned long position, unsigned long minPosition, unsigned long maxPosition));
     void setOnUpdateLearning(void (*function)(unsigned long position, unsigned long minPosition, unsigned long maxPosition));
     void setOnUpdateSpeed(void (*function)(unsigned long speed));
     void setOnUpdateSpeedLearning(void (*function)(int speed));
