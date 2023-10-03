@@ -272,10 +272,10 @@ void TcYKA2304ME::setPosition(unsigned long position)
     this->_lastDebounceTime = micros();
 
     // 
-    if (this->_position == this->_previousPosition && this->OnUpdate != NULL)
+    if (this->_position == this->_previousPosition && this->OnUpdated != NULL)
     {
         // Call event
-        this->OnUpdate(this->_position, this->minPosition, this->maxPosition);
+        this->OnUpdated(this->_position, this->minPosition, this->maxPosition);
     }
 }
 
