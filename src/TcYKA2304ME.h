@@ -30,6 +30,8 @@ class TcYKA2304ME
     // Direction
     bool _direction = true; // true: forward, false: backward
     bool _oldDirection = true;
+    // Invert direction
+    bool _invertDirection = false;
     bool isLearning = false;
     bool isPulse = false;
     // Learning
@@ -82,6 +84,7 @@ class TcYKA2304ME
     void setOnUpdateDirection(void (*function)(bool direction));
     void setOnUpdatePosition(void (*function)(unsigned long position));
     void setOnError(void (*function)(int code, String message));
+    void setInvertDirection(bool invertDirection);
     int MOTOR_OFFSET = 10000;
     // ERROR CODE
     enum ERROR_CODE {

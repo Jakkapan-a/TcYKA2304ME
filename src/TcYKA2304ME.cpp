@@ -16,6 +16,8 @@ void TcYKA2304ME::begin()
     pinMode(this->pin_mf, OUTPUT);
     // Set pin mode for encoder
     digitalWrite(this->pin_pu, HIGH);
+    // digitalWrite(this->pin_dr, HIGH);
+    digitalWrite(this->pin_mf, HIGH);
     this->_position = 0;
     this->_previousPosition = 0;
     this->setDefaultLearning();
@@ -58,7 +60,7 @@ bool TcYKA2304ME::learning()
             // Backward to start position
             if (this->_state_start)
             {
-                this->_direction = true;
+                this->_direction = !this->_direction;
                 this->isPulse = false;
                 this->_position = 0;
                 this->_previousPosition = 0;
@@ -91,8 +93,21 @@ bool TcYKA2304ME::learning()
         }
         // Pulse to move backward
         this->isPulse = !this->isPulse;
-        digitalWrite(this->pin_pu, this->isPulse);    // Pulse to move backward to start position
-        digitalWrite(this->pin_dr, this->_direction); // Direction of motor
+        digitalWrite(this->pin_pu, this->isPulse); // Pulse to move backward to start position
+        
+        bool stateDir = this->_direction;          // Direction of motor
+        if (this->_invertDirection)
+        {
+            digitalWrite(this->pin_dr, !stateDir); // Direction of motor
+        }
+        else
+        {
+            digitalWrite(this->pin_dr, stateDir); // Direction of motor
+        }
+    }
+    else if (currentMicros < 100)
+    {
+        this->_lastDebounceTime = currentMicros; // reset debounce time for overflow
     }
     return true;
 }
@@ -199,13 +214,24 @@ void TcYKA2304ME::update()
                 this->OnError(ERROR_CODE_END, "End position is not set");
             }
 
-            // Set motor
-            digitalWrite(this->pin_dr, this->_direction); // Direction of motor
+            bool stateDir = this->_direction; // Direction of motor
+            if (this->_invertDirection)
+            {
+                digitalWrite(this->pin_dr, !stateDir); // Direction of motor
+            }
+            else
+            {
+                digitalWrite(this->pin_dr, stateDir); // Direction of motor
+            }
             isPulse = !isPulse;
             digitalWrite(this->pin_pu, isPulse); // Pulse to move motor
             this->_oldDirection = this->_direction;
             _oldSpeed = currentSpeed;
             this->_lastDebounceTime = currentMicros;
+        }
+        else if (currentMicros < 100)
+        {
+            this->_lastDebounceTime = currentMicros; // reset debounce time for overflow
         }
     }
 }
@@ -271,7 +297,7 @@ void TcYKA2304ME::setPosition(unsigned long position)
     this->setDefaultSpeed();
     this->_lastDebounceTime = micros();
 
-    // 
+    //
     if (this->_position == this->_previousPosition && this->OnUpdated != NULL)
     {
         // Call event
@@ -334,4 +360,44 @@ void TcYKA2304ME::setOnUpdateSpeedLearning(void (*function)(int speed))
 void TcYKA2304ME::setOnUpdated(void (*function)(unsigned long position, unsigned long minPosition, unsigned long maxPosition))
 {
     this->OnUpdated = function;
+}
+
+void TcYKA2304ME::setOnUpdate(void (*function)(unsigned long position, unsigned long minPosition, unsigned long maxPosition))
+{
+    this->OnUpdate = function;
+}
+
+void TcYKA2304ME::setOnStart(void (*function)(unsigned long position, unsigned long minPosition, unsigned long maxPosition))
+{
+    this->OnStart = function;
+}
+
+void TcYKA2304ME::setOnEnd(void (*function)(unsigned long position, unsigned long minPosition, unsigned long maxPosition))
+{
+    this->OnEnd = function;
+}
+
+void TcYKA2304ME::setOnUpdateLearning(void (*function)(unsigned long position, unsigned long minPosition, unsigned long maxPosition))
+{
+    this->OnUpdateLearning = function;
+}
+
+void TcYKA2304ME::setOnUpdateDirection(void (*function)(bool direction))
+{
+    this->OnUpdateDirection = function;
+}
+
+void TcYKA2304ME::setOnUpdatePosition(void (*function)(unsigned long position))
+{
+    this->OnUpdatePosition = function;
+}
+
+void TcYKA2304ME::setOnError(void (*function)(int code, String message))
+{
+    this->OnError = function;
+}
+
+void TcYKA2304ME::setInvertDirection(bool invertDirection)
+{
+    this->_invertDirection = invertDirection;
 }
