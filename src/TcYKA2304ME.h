@@ -14,24 +14,30 @@ class TcYKA2304ME
     unsigned long _position;
     unsigned long _previousPosition;
     unsigned long minPosition = 0;
-    unsigned long maxPosition = 5000;
+    unsigned long maxPosition = 20000;
     // Debounce
     unsigned long _lastDebounceTime = 0;
 	  int _speed = 20;
-    int _speedLearning = 200;
+    int _speedLearning = 500;
     // Pulse
     // unsigned long currentPos = 0;
     // unsigned long targetPos = 0;
     unsigned long totalPulse = 0;
     unsigned long countRun = 0;
-    unsigned long speedStep[4] = {20,20,50,100};
-    unsigned long increase = 3000;
-    unsigned long decrease = 3000;
+    unsigned long speedStep[4] = {20,20,100,200};
+    unsigned long increase = 1000;
+    unsigned long decrease = 1000;
+     unsigned long pauseEndTime = 0;
     // Direction
     bool _direction = true; // true: forward, false: backward
     bool _oldDirection = true;
     // Invert direction
     bool _invertDirection = false;
+
+    // Invert MF
+    bool _invertMF = false;
+    void setMF(bool state);
+
     bool isLearning = false;
     bool isPulse = false;
     // Learning
@@ -41,6 +47,7 @@ class TcYKA2304ME
     // Speed
     void setDefaultSpeed();
     long getSpeedPulse();
+    
     unsigned long getSpeedMicros();
 
     // Event
@@ -57,7 +64,8 @@ class TcYKA2304ME
     void (*OnUpdateDirection)(bool direction);
     void (*OnUpdatePosition)(unsigned long position);
     void (*OnError)(int code, String message);
-    
+    void (*OnWorking)(bool state);
+
   public:
     TcYKA2304ME(int pin_pu, int pin_dr, int pin_mf);
     void begin();
@@ -85,6 +93,8 @@ class TcYKA2304ME
     void setOnUpdatePosition(void (*function)(unsigned long position));
     void setOnError(void (*function)(int code, String message));
     void setInvertDirection(bool invertDirection);
+    void setOnWorking(void (*function)(bool state));
+    void setInvertMF(bool invertMF);
     int MOTOR_OFFSET = 10000;
     // ERROR CODE
     enum ERROR_CODE {
