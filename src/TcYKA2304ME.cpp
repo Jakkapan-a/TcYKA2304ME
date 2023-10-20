@@ -33,16 +33,16 @@ void TcYKA2304ME::begin()
 
     // this->update();
 }
-void TcYKA2304ME::setSpeed(int _speed)
+void TcYKA2304ME::setSpeed(unsigned int _speed)
 {
     this->_speed = _speed;
-    this->speedStep[0] = _speed;
 }
 
 void TcYKA2304ME::setDefaultLearning()
 {
     this->_direction = false; // backward to start position
     this->isLearning = true;
+    this->isLearn = true;
 }
 
 bool TcYKA2304ME::learning()
@@ -52,19 +52,25 @@ bool TcYKA2304ME::learning()
         return false;
     }
     unsigned long currentMicros = micros();
-    this->pauseEndTime = 0;
+    // this->pauseEndTime = 0;
 
     if (this->OnWorking != NULL)
     {
         this->OnWorking(true);
     }
-    this->setMF(true);
-    if (currentMicros < pauseEndTime)
+    // this->setMF(true);
+    if (this->isLearn)
     {
-        return true; // still waiting
+        this->setMF(true);
+        // this->_lastDebounceTime = currentMicros + 1000000; // 1s
+        this->setRelay(300);
+        this->isLearn = false;
     }
+    // if (currentMicros < pauseEndTime)
+    // {
+    //     return true; // still waiting
+    // }
 
-    // if(currentMicros - this->_lastDebounceTime > this->_speedLearning)
     if (currentMicros - this->_lastDebounceTime > static_cast<unsigned long>(this->_speedLearning))
     {
         this->_lastDebounceTime = currentMicros;
@@ -77,7 +83,7 @@ bool TcYKA2304ME::learning()
                 this->isPulse = false;
                 this->_position = 0;
                 this->_previousPosition = 0;
-                pauseEndTime = currentMicros + 2000000; // 2s
+                this->setRelay(300);
             }
         }
         else
@@ -95,8 +101,9 @@ bool TcYKA2304ME::learning()
                 this->maxPosition = this->_position;
                 this->_previousPosition = this->_position;
                 // Set motor to start position
-                this->_position = this->minPosition;
-                pauseEndTime = currentMicros + 2000000; // 2s
+                this->_position = 0;
+                this->setPosition((unsigned long)this->_offsetPoint);
+
                 // Call event
                 if (this->OnLearned != NULL)
                 {
@@ -127,13 +134,16 @@ bool TcYKA2304ME::learning()
 
 void TcYKA2304ME::update()
 {
+    if (isRelay())
+    {
+        return;
+    }
     if (this->isLearning)
     {
         this->learning();
         return;
     }
     static unsigned long _oldSpeed = 0;
-
     if (this->_position != this->_previousPosition)
     {
         unsigned long currentMicros = micros();
@@ -144,7 +154,7 @@ void TcYKA2304ME::update()
             {
                 this->OnWorking(true);
             }
-            this->setMF(true);
+            // this->setMF(true);
             // Check direction
             if (this->_position > this->_previousPosition)
             {                            // Forward
@@ -206,6 +216,13 @@ void TcYKA2304ME::update()
                 // Call event
                 this->OnUpdated(this->_position, this->minPosition, this->maxPosition);
             }
+
+            if (this->_position == this->_previousPosition)
+            {
+                // Count success update position
+                this->countSleep = 10000; // 10s
+                this->countSuccess = 40;  // 40ms
+            }
             if (this->OnUpdatePosition != NULL)
             {
                 this->OnUpdatePosition(this->_previousPosition);
@@ -258,7 +275,6 @@ void TcYKA2304ME::update()
         {
             this->OnWorking(false);
         }
-        this->setMF(false);
     }
 }
 
@@ -278,51 +294,22 @@ void TcYKA2304ME::setDefaultSpeed()
 unsigned long TcYKA2304ME::getSpeedMicros()
 {
     this->countRun++;
-
     if (this->countRun <= this->increase)
     {
-        if(this->countRun > this->totalPulse - this->decrease){
-            return map(this->countRun, this->totalPulse - this->decrease, this->totalPulse, 20, 500);
+        if (this->countRun > this->totalPulse - this->decrease)
+        {
+            return map(this->countRun, this->totalPulse - this->decrease, this->totalPulse, this->_speed, this->slowDownSpeed);
         }
         // increase
-        return map(this->countRun, 0, this->increase, 500, 20);
-        // return this->speedStep[speed]; // increase
+        return map(this->countRun, 0, this->increase, this->slowStartSpeed, this->_speed);
     }
 
     else if (this->countRun >= this->totalPulse - this->decrease)
-    {   
+    {
         // decrease
-        return map(this->countRun, this->totalPulse - this->decrease, this->totalPulse, 20, 500);
-        // return this->speedStep[speed]; // decrease
+        return map(this->countRun, this->totalPulse - this->decrease, this->totalPulse, this->_speed, this->slowDownSpeed);
     }
-    return this->speedStep[0]; // default speed (could be adjusted as needed)
-
-    // this->countRun++;
-    // if (this->totalPulse < this->increase && this->totalPulse < this->decrease)
-    // {
-    //     if (this->countRun <= this->increase / 2)
-    //     {
-    //         int speed = map(this->countRun, 0, this->increase / 2, 1, 3);
-    //         return this->speedStep[speed]; // increase
-    //     }
-    //     else if (this->countRun >= this->totalPulse - (this->decrease / 2))
-    //     {
-    //         int speed = map(this->countRun, this->totalPulse - this->decrease / 2, this->totalPulse, 3, 1);
-    //         return this->speedStep[speed]; // decrease
-    //     }
-    //     return this->speedStep[2]; // slightly faster during learning
-    // }
-    // else if (this->countRun <= this->increase)
-    // {
-    //     int speed = map(this->countRun, 0, this->increase, 3, 0);
-    //     return this->speedStep[speed]; // increase
-    // }
-    // else if (this->countRun >= this->totalPulse - this->decrease)
-    // {
-    //     int speed = map(this->countRun, this->totalPulse - this->decrease, this->totalPulse, 0, 3);
-    //     return this->speedStep[speed]; // decrease
-    // }
-    // return this->speedStep[0]; // default speed (could be adjusted as needed)
+    return this->_speed; // default speed (could be adjusted as needed)
 }
 
 void TcYKA2304ME::setPosition(unsigned long position)
@@ -341,13 +328,15 @@ void TcYKA2304ME::setPosition(unsigned long position)
         this->_position = input;
     }
     this->setDefaultSpeed();
-    this->_lastDebounceTime = micros();
+    this->setMF(true);
+    this->countSleep = 0;
+    setRelay(400);
+    this->_lastDebounceTime = micros() + 1000000; // 1s
 
     // Call event
-    if (this->_position == this->_previousPosition && this->OnUpdated != NULL)
+    if (this->_position == this->_previousPosition)
     {
-        // Call event
-        this->OnUpdated(this->_position, this->minPosition, this->maxPosition);
+        countSuccess = 50; // 50ms
     }
 }
 
@@ -368,7 +357,7 @@ int TcYKA2304ME::getSpeed()
     return this->_speed;
 }
 
-void TcYKA2304ME::setSpeedLearning(int speed)
+void TcYKA2304ME::setSpeedLearning(unsigned int speed)
 {
     this->_speedLearning = speed;
 }
@@ -453,26 +442,107 @@ void TcYKA2304ME::setOnWorking(void (*function)(bool state))
     this->OnWorking = function;
 }
 
-// void TcYKA2304ME::setSpeedStep(int speed1, int speed2, int speed3, int speed4)
-// {
-//     this->speedStep[0] = speed1;
-//     this->speedStep[1] = speed2;
-//     this->speedStep[2] = speed3;
-//     this->speedStep[3] = speed4;
-// }
 void TcYKA2304ME::setInvertMF(bool invertMF)
 {
     this->_invertMF = invertMF;
 }
 
-void TcYKA2304ME::setMF(bool state)
+void TcYKA2304ME::setMF(bool _state)
 {
     if (this->_invertMF)
     {
-        digitalWrite(this->pin_mf, !state);
+        digitalWrite(this->pin_mf, !_state);
     }
     else
     {
-        digitalWrite(this->pin_mf, state);
+        digitalWrite(this->pin_mf, _state);
     }
+}
+
+void TcYKA2304ME::setSlowStart(unsigned int speed)
+{
+    this->slowStartSpeed = speed;
+}
+
+void TcYKA2304ME::setSlowEnd(unsigned int speed)
+{
+    this->slowDownSpeed = speed;
+}
+
+void TcYKA2304ME::setIncrease(unsigned int distance)
+{
+    this->increase = distance;
+}
+
+void TcYKA2304ME::setDecrease(unsigned int distance)
+{
+    this->decrease = distance;
+}
+
+void TcYKA2304ME::setOffsetPoint(unsigned int offsetPoint)
+{
+    this->_offsetPoint = offsetPoint;
+}
+
+void TcYKA2304ME::setToOffsetPoint()
+{
+    this->setPosition((unsigned long)this->_offsetPoint);
+}
+
+void TcYKA2304ME::setLearning(bool state)
+{
+    this->isLearning = state;
+    this->isLearn = state;
+}
+
+bool TcYKA2304ME::isRelay()
+{
+    if (millis() - _lastDebounceTimeMillisCountDown > 1) // 1ms
+    {
+        if (countRelay > 0)
+        {
+            countRelay--;
+            if (countRelay <= 0)
+            {
+                countRelay = 0;
+                isRelayState = false;
+            }
+        }
+
+        if (countSleep > 0)
+        {
+            countSleep--;
+            if (countSleep <= 0)
+            {
+                countSleep = 0;
+                this->setMF(false);
+            }
+        }
+
+        if (countSuccess > 0)
+        {
+            countSuccess--;
+            if (countSuccess <= 0)
+            {
+                countSuccess = 0;
+                if (this->OnUpdated != NULL)
+                {
+                    // Call event
+                    this->OnUpdated(this->_position, this->minPosition, this->maxPosition);
+                }
+            }
+        }
+        _lastDebounceTimeMillisCountDown = millis();
+    }
+    else if (millis() < 100)
+    {
+        _lastDebounceTimeMillisCountDown = millis();
+    }
+    return isRelayState;
+}
+
+void TcYKA2304ME::setRelay(int count)
+{
+    countRelay = count;
+    isRelayState = true;
 }
